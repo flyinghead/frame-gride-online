@@ -1,5 +1,7 @@
 # frame-gride-online
 
+English | [日本語](README.ja.md)
+
 **Unofficial fan project.** Brings back the online 2-player mode ("NET GAME") of the Dreamcast game *FRAME GRIDE* (FromSoftware, 1999, `T34201M`) on the [Flycast](https://github.com/flyinghead/flycast) emulator, with an **unmodified disc** and the **official Flycast 2.7**.
 
 The original game servers are long gone. This project replaces them with a small host-side server written in Python (standard library only):
@@ -98,12 +100,3 @@ Two tests read a real memory card if you point `FG_SAVE_IMAGE` at one; otherwise
 
 MIT, see [LICENSE](LICENSE). The license covers this project's code and documents only, not the game or Flycast.
 
----
-
-## 日本語の概要
-
-ドリームキャスト『フレームグライド』の「NET GAME」（2人のオンライン対戦）を、Flycast 2.7 で復活させる**非公式**のファン制作です。ディスクとFlycastは改造しません。終了した公式サーバーの代わりに、PPPのブリッジとロビーをPythonで再実装しました。ゲームのデータは含みません。
-
-- 1台のPCで2つのFlycastを使った対戦は、最後まで動作します。
-- 別PC間は、LANでロビーに入るところまで確認しました。2台での試合の完走と、インターネット越しの対戦は、まだ確認していません。
-- `unlock_all.py` で、自分のセーブの全パーツと素材を解放できます。元のセーブは上書きしません。
