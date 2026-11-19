@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Logs written by the servers
+*.jsonl
+*.log
+modem-rx.bin
+modem-ppp-rx.bin
+
+# Game data and memory cards: never commit
+*.bin
+*.gdi
+*.cdi
+*.chd
+*.iso
+*.7z
+*.zip
+*.state
+unlocked/
