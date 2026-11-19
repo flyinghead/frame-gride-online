@@ -112,6 +112,33 @@ class TestUnlockAll(unittest.TestCase):
         self.assertEqual(struct.unpack_from("<12I", after, RECORDS_REL), (MAX_RECORD, 0, MAX_RECORD) * 4)
         self.assertEqual(after[316:344], raw[DATA_OFFSET + 316:DATA_OFFSET + 344])  # post-record fields preserved
 
+    def records(self, save: bytes) -> tuple[int, ...]:
+        return struct.unpack_from("<12I", save, DATA_OFFSET + RECORDS_REL)
+
+    def test_wins_and_losses_set_every_record_group_with_matches_as_their_sum(self) -> None:
+        unlocked = unlock_save_bytes(make_fgride_save(), wins=120, losses=30)
+        self.assertEqual(self.records(unlocked), (150, 30, 120) * 4)
+        self.assertTrue(crc_ok(unlocked))
+        self.assertTrue(inner_checksum_ok(unlocked))
+
+    def test_matches_stop_at_9999_when_wins_plus_losses_is_larger(self) -> None:
+        unlocked = unlock_save_bytes(make_fgride_save(), wins=MAX_RECORD, losses=MAX_RECORD)
+        self.assertEqual(self.records(unlocked), (MAX_RECORD, MAX_RECORD, MAX_RECORD) * 4)
+
+    def test_only_losses_keeps_the_saved_wins(self) -> None:
+        first = unlock_save_bytes(make_fgride_save(), wins=10, losses=0)
+        second = unlock_save_bytes(first, losses=5)
+        self.assertEqual(self.records(second), (15, 5, 10) * 4)
+
+    def test_rejects_record_values_out_of_range(self) -> None:
+        for kwargs in ({"wins": MAX_RECORD + 1}, {"losses": -1}):
+            with self.assertRaises(ValueError):
+                unlock_save_bytes(make_fgride_save(), **kwargs)
+
+    def test_max_records_cannot_be_combined_with_wins_or_losses(self) -> None:
+        with self.assertRaises(ValueError):
+            unlock_save_bytes(make_fgride_save(), max_records=True, losses=3)
+
 
 if __name__ == "__main__":
     unittest.main()

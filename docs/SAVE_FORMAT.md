@@ -82,6 +82,7 @@ Options:
 - `--material-count N` (`1..99`, default `99`): Quantity for all `13` Material Stones
 - `--cat8-value N` (`1..99`, default `1`): Value for Category 8 (Shields)
 - `--max-records`: Set `1P`, `VS`, `NET`, and `TOTAL` battle records (`0x38C..0x3BB`) to `9999` matches / `0` losses / `9999` wins (`0x270F`)
+- `--wins N`, `--losses N` (`0..9999` each): Set the wins and/or losses of all four record groups. Matches become wins + losses, capped at `9999`. A count you leave out keeps its saved value. Cannot be combined with `--max-records`. (Checked on the file and its checksums; how the game shows a record with losses has not been checked on screen yet.)
 
 Verify a modified card image with `vmu_tool.py`:
 

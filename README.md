@@ -76,6 +76,8 @@ uv run python unlock_all.py T34201M_vmu_save_A1.bin unlocked/T34201M_vmu_save_A1
 uv run python vmu_tool.py unlocked/T34201M_vmu_save_A1.bin
 ```
 
+Battle records are left as they are unless you ask: `--wins N` and `--losses N` (0-9999 each) set the wins and losses of the 1P, VS, NET and TOTAL records, and the number of matches becomes wins + losses (at most 9999). `--max-records` is a shortcut for 9999 matches, 0 losses, 9999 wins. The record with losses has been checked in the file, not yet on the game screen.
+
 The original card is never overwritten; keep a copy anyway. Put the new card in Flycast's data folder. To use the unlocked mech in NET GAME: in the team room, START → 騎兵設定 → 記 録 → ロード → pick the save → B → 設定終了. Details: [docs/SAVE_FORMAT.md](docs/SAVE_FORMAT.md).
 
 ## Bridge options for testing

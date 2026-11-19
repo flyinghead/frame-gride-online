@@ -82,6 +82,29 @@ def _fill_range(buf: bytearray, bounds: tuple[int, int], value: int) -> None:
     buf[lo:hi] = bytes([value]) * (hi - lo)
 
 
+RECORD_GROUPS = 4  # 1P, VS, NET, TOTAL
+
+
+def _set_records(payload: bytearray, wins: int | None, losses: int | None) -> None:
+    """Write wins and/or losses into every record group; matches become wins + losses (at most MAX_RECORD).
+    A value left as None keeps what the save already holds."""
+    values = list(struct.unpack_from(f"<{RECORD_GROUPS * 3}I", payload, RECORDS_REL))
+    for group in range(RECORD_GROUPS):
+        _matches, old_losses, old_wins = values[group * 3:group * 3 + 3]
+        new_wins = old_wins if wins is None else wins
+        new_losses = old_losses if losses is None else losses
+        values[group * 3:group * 3 + 3] = [min(MAX_RECORD, new_wins + new_losses), new_losses, new_wins]
+    struct.pack_into(f"<{RECORD_GROUPS * 3}I", payload, RECORDS_REL, *values)
+
+
+def _check_record_options(max_records: bool, wins: int | None, losses: int | None) -> None:
+    if max_records and (wins is not None or losses is not None):
+        raise ValueError("use either max_records or wins/losses, not both")
+    for name, val in (("wins", wins), ("losses", losses)):
+        if val is not None and not 0 <= val <= MAX_RECORD:
+            raise ValueError(f"{name} must be in 0..{MAX_RECORD}, got {val}")
+
+
 def unlock_save_bytes(
     save_bytes: bytes,
     *,
@@ -89,11 +112,17 @@ def unlock_save_bytes(
     material_count: int = MAX_STACK,
     cat8_value: int = 1,
     max_records: bool = False,
+    wins: int | None = None,
+    losses: int | None = None,
 ) -> bytes:
-    """Return a copy of raw F_GRIDE.0000 bytes with all items unlocked and checksums fixed."""
+    """Return a copy of raw F_GRIDE.0000 bytes with all items unlocked and checksums fixed.
+
+    max_records sets every record group to 9999 matches, 0 losses, 9999 wins. wins / losses set those counts instead
+    (0..9999 each; the other one keeps its saved value when left as None)."""
     for name, val in (("stone_count", stone_count), ("material_count", material_count), ("cat8_value", cat8_value)):
         if not 1 <= val <= MAX_STACK:
             raise ValueError(f"{name} must be in 1..{MAX_STACK}, got {val}")
+    _check_record_options(max_records, wins, losses)
 
     data_offset = _save_data_offset(save_bytes)
     expected_len = data_offset + DATA_SIZE
@@ -111,7 +140,9 @@ def unlock_save_bytes(
     _fill_range(payload, STONES_RANGE, stone_count)
     _fill_range(payload, MATERIALS_RANGE, material_count)
     if max_records:
-        struct.pack_into("<12I", payload, RECORDS_REL, *((MAX_RECORD, 0, MAX_RECORD) * 4))
+        _set_records(payload, MAX_RECORD, 0)
+    elif wins is not None or losses is not None:
+        _set_records(payload, wins, losses)
 
     payload[OWNED_COUNT_REL] = min(255, count_owned_items(payload))
     struct.pack_into("<I", payload, INNER_SUM_REL, inner_checksum(payload))
@@ -143,6 +174,8 @@ def unlock_vmu_image(
     material_count: int = MAX_STACK,
     cat8_value: int = 1,
     max_records: bool = False,
+    wins: int | None = None,
+    losses: int | None = None,
 ) -> bytes:
     """Unlock all items inside ``file_name`` in a VMU card image and return updated image bytes."""
     matches = [f for f in list_files(image) if f.name == file_name]
@@ -158,6 +191,8 @@ def unlock_vmu_image(
         material_count=material_count,
         cat8_value=cat8_value,
         max_records=max_records,
+        wins=wins,
+        losses=losses,
     )
     return write_vmu_file(image, vmu_file, unlocked)
 
@@ -170,8 +205,14 @@ def main() -> int:
     parser.add_argument("--material-count", type=int, default=MAX_STACK, help="count for all 13 Materials (1..99)")
     parser.add_argument("--cat8-value", type=int, default=1, help="count for category 8 items (1..99, default 1)")
     parser.add_argument("--max-records", action="store_true",
-                        help="set 1P / VS / NET / TOTAL battle records to 9999/9999 (0x270F)")
+                        help="set 1P / VS / NET / TOTAL battle records to 9999 matches, 0 losses, 9999 wins")
+    parser.add_argument("--wins", type=int, help="set the wins of every record group (0..9999)")
+    parser.add_argument("--losses", type=int, help="set the losses of every record group (0..9999)")
     args = parser.parse_args()
+    try:
+        _check_record_options(args.max_records, args.wins, args.losses)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     src_bytes = args.src.read_bytes()
     out_bytes = unlock_vmu_image(
@@ -180,13 +221,15 @@ def main() -> int:
         material_count=args.material_count,
         cat8_value=args.cat8_value,
         max_records=args.max_records,
+        wins=args.wins,
+        losses=args.losses,
     )
     args.dst.parent.mkdir(parents=True, exist_ok=True)
     args.dst.write_bytes(out_bytes)
     print(
         f"Unlocked {SAVE_NAME}: wrote {args.dst} ({len(out_bytes)} bytes, "
         f"stones={args.stone_count}, materials={args.material_count}, "
-        f"cat8={args.cat8_value}, max_records={args.max_records})"
+        f"cat8={args.cat8_value}, max_records={args.max_records}, wins={args.wins}, losses={args.losses})"
     )
     return 0
 
