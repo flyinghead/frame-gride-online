@@ -95,6 +95,7 @@ Two tests read a real memory card if you point `FG_SAVE_IMAGE` at one; otherwise
 ## Documents
 
 - [docs/PROTOCOL.md](docs/PROTOCOL.md): what the bridge and the lobby speak.
+- [docs/HANDSHAKE.md](docs/HANDSHAKE.md): the exact PPP handshake the game needs (LCP, PAP, IPCP), byte by byte.
 - [docs/MEASUREMENTS.md](docs/MEASUREMENTS.md): delay, jitter, loss and input-lag results.
 - [docs/SAVE_FORMAT.md](docs/SAVE_FORMAT.md): the save file layout and the unlock tool.
 

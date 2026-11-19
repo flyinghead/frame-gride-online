@@ -17,7 +17,7 @@ With `DCNet = yes`, Flycast does not run its own PPP stack: it sends the emulate
 - HDLC-like framing (RFC 1662) with the FCS-16; frames start and end with `0x7E`.
 - **LCP**: accepts MRU, ACCM, magic number, PFC and ACFC. **The console's ACCM must be honored**: control characters it asks to escape are escaped on the way back. Sending them raw made the battle handshake fail now and then.
 - **IPCP**: the server offers `192.168.167.1`; the first console gets `192.168.167.2`, the next `.3`, and so on. The console first asks for `0.0.0.0` and gets a NAK with its address.
-- **VJ header compression**: `--vj asymmetric` (default) accepts compressed frames from the console but does not ask the console to accept them. Both directions are decoded.
+- **VJ header compression**: with `--vj asymmetric` (default) the server's IPCP request carries the VJ option (the game acks it) and the game's own VJ request is rejected, so the server never sends compressed frames. The bridge has no VJ decompressor, and the game never sent a compressed frame in the captured sessions. See [HANDSHAKE.md](HANDSHAKE.md).
 - The game talks to the lobby at the fixed address `172.16.0.21` (built into the game); the bridge turns those UDP packets into local UDP to `127.0.0.1:9500/9501` and back.
 - Packets between `192.168.167.x` addresses (console to console) are forwarded inside the bridge, in order. The test options `--p2p-delay-ms`, `--p2p-jitter-ms` and `--p2p-loss-pct` act only on these.
 

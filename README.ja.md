@@ -97,6 +97,7 @@ uv run python -m unittest discover
 ## 文書（英語）
 
 - [docs/PROTOCOL.md](docs/PROTOCOL.md): ブリッジとロビーがやり取りする内容
+- [docs/HANDSHAKE.md](docs/HANDSHAKE.md): ゲームが必要とする PPP のあいさつ（LCP、PAP、IPCP）の、バイト単位の記録
 - [docs/MEASUREMENTS.md](docs/MEASUREMENTS.md): 遅延、ゆらぎ、パケットロス、入力の遅れの測定結果
 - [docs/SAVE_FORMAT.md](docs/SAVE_FORMAT.md): セーブファイルの形式と全解放ツール
 
