@@ -14,8 +14,8 @@ With `DCNet = yes`, Flycast does not run its own PPP stack: it sends the emulate
 
 ## PPP (`ppp_engine.py`)
 
-- HDLC-like framing (RFC 1662) with the FCS-16; frames start and end with `0x7E`.
-- **LCP**: accepts MRU, ACCM, magic number, PFC and ACFC. **The console's ACCM must be honored**: control characters it asks to escape are escaped on the way back. Sending them raw made the battle handshake fail now and then.
+- HDLC-like framing (RFC 1662) with the FCS-16. **Every frame starts and ends with its own `0x7E`**, so back-to-back frames have `7E 7E` between them; the game drops a frame that has no leading flag of its own (see [HANDSHAKE.md](HANDSHAKE.md)).
+- **LCP**: accepts MRU, ACCM, magic number, PFC and ACFC. **The console's ACCM must be honored**: the game asks for ACCM 0, so only `0x7D` and `0x7E` are escaped on the way back. Escaping every control character (ignoring the ACCM) made frames larger and slowed the battle start enough to fail it sometimes.
 - **IPCP**: the server offers `192.168.167.1`; the first console gets `192.168.167.2`, the next `.3`, and so on. The console first asks for `0.0.0.0` and gets a NAK with its address.
 - **VJ header compression**: with `--vj asymmetric` (default) the server's IPCP request carries the VJ option (the game acks it) and the game's own VJ request is rejected, so the server never sends compressed frames. The bridge has no VJ decompressor, and the game never sent a compressed frame in the captured sessions. See [HANDSHAKE.md](HANDSHAKE.md).
 - The game talks to the lobby at the fixed address `172.16.0.21` (built into the game); the bridge turns those UDP packets into local UDP to `127.0.0.1:9500/9501` and back.
