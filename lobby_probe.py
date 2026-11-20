@@ -7,8 +7,9 @@ import re
 import selectors
 import socket
 import time
+import discord
 
-LOG_PATH = Path(__file__).resolve().parent / 'lobby-probe.jsonl'
+#LOG_PATH = Path(__file__).resolve().parent / 'lobby-probe.jsonl'
 CMD_RE = re.compile(rb'^(\d+)\s+(\d+)\s+(\d+)\s+([A-Z0-9_]+)(?:\s+(.*))?$', re.DOTALL)
 GAME_NAME_SJIS = 'フレームグライド'.encode('shift_jis')
 
@@ -20,6 +21,7 @@ def clean_nul(data: bytes) -> bytes:
 
 
 def ppp_ip_for_peer(peer_host: str) -> str:
+    return peer_host
     """Map a local loopback peer host to the Dreamcast client's PPP IP."""
     if peer_host == '127.0.0.1':
         return '192.168.167.2'
@@ -33,9 +35,8 @@ def ppp_ip_for_peer(peer_host: str) -> str:
 def log_event(entry: dict) -> None:
     line = json.dumps(entry, ensure_ascii=False)
     print(line, flush=True)
-    with LOG_PATH.open('a', encoding='utf-8') as f:
-        f.write(line + '\n')
-
+    #with LOG_PATH.open('a', encoding='utf-8') as f:
+    #    f.write(line + '\n')
 
 @dataclass
 class ClientSession:
@@ -135,6 +136,23 @@ class LobbyServer:
                 out.append((delay, recipient.peer_addr, payload))
         return out
 
+    def discord_new_player(self, client):
+        # Announce a new player to Discord.
+        playerName = discord.escape(client.nick_bytes.decode("shift_jis"))
+        content = f"Player **{playerName}** has joined the lobby"
+        lobbyPlayers = [discord.escape(c.nick_bytes.decode("shift_jis")) for c in self.clients.values()]
+        embedText = '\n'.join(lobbyPlayers)
+        discord.notification(content, "Lobby players",  embedText)
+
+    def discord_new_team(self, client):
+        # Announce a new team to Discord.
+        playerName = discord.escape(client.nick_bytes.decode("shift_jis"))
+        teamName = discord.escape(client.team_name.decode("shift_jis"))
+        content = f"Player **{playerName}** created team **{teamName}**"
+        lobbyPlayers = [discord.escape(c.nick_bytes.decode("shift_jis")) for c in self.clients.values()]
+        embedText = '\n'.join(lobbyPlayers)
+        discord.notification(content, "Lobby players",  embedText)
+
     def handle_datagram(
         self,
         trimmed: bytes,
@@ -144,7 +162,7 @@ class LobbyServer:
         if trimmed.startswith(b'REQUEST_FILTER'):
             return [
                 (0.00, peer_addr, b'1000 1'),
-                (0.05, peer_addr, b'1001 FrameGrideLocal 172.16.0.21 9501'),
+                (0.05, peer_addr, b'1001 DCNet 172.20.0.1 9601'),
                 (0.10, peer_addr, b'1002'),
             ]
 
@@ -171,7 +189,7 @@ class LobbyServer:
 
         if cmd == b'LIST':
             chan = client.channel or b'Lobby1'
-            user_count = len(self._channel_clients(chan)) or 1
+            user_count = len(self._channel_clients(chan)) or 0
             return [
                 (0.01, peer_addr, b'109 ' + chan + b' ' + str(user_count).encode('ascii') + b' 32 :TestLobby'),
                 (0.06, peer_addr, b'110'),
@@ -195,6 +213,7 @@ class LobbyServer:
             if client.channel != channel:
                 self._remove_from_team(client)
             client.channel = channel
+            self.discord_new_player(client)
             payload = b'102 ' + channel + b' ' + client.nick_bytes
             return self._broadcast(self._channel_recipients(client, channel), payload)
 
@@ -302,6 +321,7 @@ class LobbyServer:
             )
             self.teams[(chan, team_name)] = team
             client.team_name = team_name
+            self.discord_new_team(client)
             flags = b'8' if password else b'0'
             payload = (
                 b'120 ' + team_name + b' ' + client.nick_bytes + b' '
@@ -449,17 +469,17 @@ def build_replies_for_datagram(trimmed: bytes, state: LobbyProbeState | None = N
 
 
 def main() -> None:
-    LOG_PATH.write_text('', encoding='utf-8')
+    #LOG_PATH.write_text('', encoding='utf-8')
     sel = selectors.DefaultSelector()
     sockets: dict[int, socket.socket] = {}
-    for port in (9500, 9501):
+    for port in (9600, 9601):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('127.0.0.1', port))
+        sock.bind(('', port))
         sock.setblocking(False)
         sel.register(sock, selectors.EVENT_READ, data=port)
         sockets[port] = sock
 
-    log_event({'listening': [['127.0.0.1', 9500], ['127.0.0.1', 9501]], 'mode': 'lobby_probe'})
+    log_event({'listening': [['localhost', 9600], ['localhost', 9601]], 'mode': 'lobby_probe'})
     pending_sends: list[tuple[float, socket.socket, tuple[str, int], bytes]] = []
     server = LobbyServer()
 
