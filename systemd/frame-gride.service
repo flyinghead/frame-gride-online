@@ -1,0 +1,15 @@
+[Unit]
+Description=Frame Gride lobby server
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=dcnet
+ExecStart=python3 -B /usr/local/share/frame-gride/lobby_probe.py
+StandardOutput=append:/var/local/log/frame-gride.log
+
+[Install]
+WantedBy=multi-user.target
